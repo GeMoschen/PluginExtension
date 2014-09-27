@@ -72,8 +72,6 @@ public class PluginManager {
                     continue;
                 }
 
-                System.out.println(file);
-
                 // open JAR
                 JarFile jarFile = new JarFile(file);
                 Enumeration<JarEntry> e = jarFile.entries();
