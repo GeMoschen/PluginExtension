@@ -43,7 +43,7 @@ public class AbstractPlugin {
     private boolean enabled;
     private Object instance;
     private final String name, version;
-    private final Map<Priority, List<Method>> onEnableList, onDisableList;
+    private final Map<Priority, List<Method>> onEnableMap, onDisableMap;
 
     public AbstractPlugin(PluginManager pluginManager, Class<?> clazz) {
         try {
@@ -57,8 +57,8 @@ public class AbstractPlugin {
             this.name = this.fetchPluginName();
             this.version = this.fetchPluginVersion();
             this.enabled = false;
-            this.onEnableList = this.fetchMethods(OnEnable.class);
-            this.onDisableList = this.fetchMethods(OnDisable.class);
+            this.onEnableMap = this.fetchMethods(OnEnable.class);
+            this.onDisableMap = this.fetchMethods(OnDisable.class);
         }
     }
 
@@ -89,7 +89,7 @@ public class AbstractPlugin {
     }
 
     private Map<Priority, List<Method>> fetchMethods(Class<?> clazz) {
-        // create new list
+        // create new map
         Map<Priority, List<Method>> map = new TreeMap<Priority, List<Method>>();
 
         // fetch methods
@@ -127,12 +127,12 @@ public class AbstractPlugin {
                 }
             }
         }
-        // return an unmodifiable list
+        // return an unmodifiable map
         return Collections.unmodifiableMap(map);
     }
 
-    private void callMethods(Map<Priority, List<Method>> list) {
-        for (Map.Entry<Priority, List<Method>> entry : list.entrySet()) {
+    private void callMethods(Map<Priority, List<Method>> map) {
+        for (Map.Entry<Priority, List<Method>> entry : map.entrySet()) {
             for (Method method : entry.getValue()) {
                 try {
                     method.invoke(this.instance);
@@ -145,14 +145,14 @@ public class AbstractPlugin {
 
     public void enable() {
         if (!this.enabled) {
-            this.callMethods(this.onEnableList);
+            this.callMethods(this.onEnableMap);
             this.enabled = true;
         }
     }
 
     public void disable() {
         if (this.enabled) {
-            this.callMethods(this.onDisableList);
+            this.callMethods(this.onDisableMap);
             this.enabled = false;
         }
     }
