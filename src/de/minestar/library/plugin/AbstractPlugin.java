@@ -25,17 +25,17 @@
 package de.minestar.library.plugin;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
+import de.minestar.library.plugin.annotations.OnDisable;
+import de.minestar.library.plugin.annotations.OnEnable;
 import de.minestar.library.plugin.annotations.Plugin;
-import de.minestar.library.plugin.annotations.onDisable;
-import de.minestar.library.plugin.annotations.onEnable;
-import de.minestar.library.plugin.exceptions.AlreadyDisabledException;
-import de.minestar.library.plugin.exceptions.AlreadyEnabledException;
+import de.minestar.library.plugin.units.Priority;
 
 public class AbstractPlugin {
 
@@ -43,7 +43,7 @@ public class AbstractPlugin {
     private boolean enabled;
     private Object instance;
     private final String name, version;
-    private final List<Method> onEnableList, onDisableList;
+    private final Map<Priority, List<Method>> onEnableList, onDisableList;
 
     public AbstractPlugin(PluginManager pluginManager, Class<?> clazz) {
         try {
@@ -57,8 +57,8 @@ public class AbstractPlugin {
             this.name = this.fetchPluginName();
             this.version = this.fetchPluginVersion();
             this.enabled = false;
-            this.onEnableList = this.fetchMethods(onEnable.class);
-            this.onDisableList = this.fetchMethods(onDisable.class);
+            this.onEnableList = this.fetchMethods(OnEnable.class);
+            this.onDisableList = this.fetchMethods(OnDisable.class);
         }
     }
 
@@ -88,9 +88,9 @@ public class AbstractPlugin {
         return "UNKNOWN";
     }
 
-    private List<Method> fetchMethods(Class<?> clazz) {
+    private Map<Priority, List<Method>> fetchMethods(Class<?> clazz) {
         // create new list
-        List<Method> list = new ArrayList<Method>();
+        Map<Priority, List<Method>> map = new TreeMap<Priority, List<Method>>();
 
         // fetch methods
         Method[] methods = this.instance.getClass().getDeclaredMethods();
@@ -106,43 +106,54 @@ public class AbstractPlugin {
             for (Annotation annotation : annotations) {
                 // if the class is the same, append the method
                 if (clazz.isAssignableFrom(annotation.getClass())) {
-                    list.add(method);
+
+                    // fetch level
+                    Priority level = Priority.THIRD_MOST;
+                    if (OnEnable.class.isAssignableFrom(annotation.getClass())) {
+                        OnEnable onEnable = (OnEnable) annotation;
+                        level = onEnable.level();
+                    } else if (OnDisable.class.isAssignableFrom(annotation.getClass())) {
+                        OnDisable onDisable = (OnDisable) annotation;
+                        level = onDisable.level();
+                    }
+
+                    // create arrayList, if there is none yet
+                    if (!map.containsKey(level)) {
+                        map.put(level, new ArrayList<Method>());
+                    }
+
+                    // append the method
+                    map.get(level).add(method);
                 }
             }
         }
         // return an unmodifiable list
-        return Collections.unmodifiableList(list);
+        return Collections.unmodifiableMap(map);
     }
 
-    private void callMethods(List<Method> list) {
-        for (Method method : list) {
-            try {
-                method.invoke(this.instance);
-            } catch (IllegalAccessException print) {
-                print.printStackTrace();
-            } catch (IllegalArgumentException print) {
-                print.printStackTrace();
-            } catch (InvocationTargetException print) {
-                print.printStackTrace();
+    private void callMethods(Map<Priority, List<Method>> list) {
+        for (Map.Entry<Priority, List<Method>> entry : list.entrySet()) {
+            for (Method method : entry.getValue()) {
+                try {
+                    method.invoke(this.instance);
+                } catch (Exception print) {
+                    print.printStackTrace();
+                }
             }
         }
     }
 
-    public void enable() throws AlreadyEnabledException {
+    public void enable() {
         if (!this.enabled) {
             this.callMethods(this.onEnableList);
             this.enabled = true;
-        } else {
-            throw new AlreadyEnabledException("Plugin [ " + this.name + " ] is already enabled!");
         }
     }
 
-    public void disable() throws AlreadyDisabledException {
+    public void disable() {
         if (this.enabled) {
             this.callMethods(this.onDisableList);
             this.enabled = false;
-        } else {
-            throw new AlreadyDisabledException("Plugin [ " + this.name + " ] is already disabled!");
         }
     }
 

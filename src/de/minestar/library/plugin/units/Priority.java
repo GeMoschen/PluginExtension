@@ -21,15 +21,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+package de.minestar.library.plugin.units;
 
-package de.minestar.library.plugin.exceptions;
+public enum Priority {
 
-public class AlreadyDisabledException extends Exception {
+    FIRST_MOST,
 
-    private static final long serialVersionUID = -8373240683172491427L;
+    SECOND_MOST,
 
-    public AlreadyDisabledException(String string) {
-        super(string);
-    }
+    THIRD_MOST,
 
+    FOURTH_MOST,
+
+    FIFTH_MOST;
 }

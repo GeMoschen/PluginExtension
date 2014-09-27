@@ -29,7 +29,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import de.minestar.library.plugin.units.Priority;
+
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface onDisable {
+public @interface OnEnable {
+
+    public Priority level() default Priority.THIRD_MOST;
 }
