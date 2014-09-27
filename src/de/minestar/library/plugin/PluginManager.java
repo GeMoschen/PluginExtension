@@ -72,6 +72,8 @@ public class PluginManager {
                     continue;
                 }
 
+                System.out.println(file);
+
                 // open JAR
                 JarFile jarFile = new JarFile(file);
                 Enumeration<JarEntry> e = jarFile.entries();
@@ -83,10 +85,18 @@ public class PluginManager {
                 // iterate over elements...
                 Class<?> clazz;
                 while (e.hasMoreElements()) {
-                    // get the entry
-                    clazz = this.processJarEntry(cl, (JarEntry) e.nextElement());
-                    if (clazz != null) {
-                        set.add(clazz);
+                    try {
+                        // get the entry
+                        clazz = this.processJarEntry(cl, (JarEntry) e.nextElement());
+                        if (clazz != null) {
+                            if (!set.contains(clazz)) {
+                                set.add(clazz);
+                            } else {
+                                throw new PluginExistsException("A plugin named '" + clazz.toString().substring(6) + "' already exists!");
+                            }
+                        }
+                    } catch (PluginExistsException print) {
+                        print.printStackTrace();
                     }
                 }
 
@@ -141,7 +151,6 @@ public class PluginManager {
         for (Class<?> clazz : this.registeredClasses) {
             AbstractPlugin plugin = new AbstractPlugin(this, clazz);
             // ignore plugins with the same name
-
             try {
                 if (this.loadedPlugins.containsKey(plugin.getName())) {
                     throw new PluginExistsException("A plugin named '" + plugin.getName() + "' already exists!");
