@@ -33,7 +33,7 @@ import de.minestar.library.plugin.units.Priority;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface OnDisable {
+public @interface PreDisable {
 
     public Priority priority() default Priority.THIRD_MOST;
 }

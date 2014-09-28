@@ -162,6 +162,11 @@ public class PluginManager {
         for (Class<?> clazz : this.registeredClasses.values()) {
             this.enablePlugin(clazz);
         }
+
+        // call postEnable-methods
+        for (AbstractPlugin plugin : this.loadedPlugins.values()) {
+            plugin.onPostEnable();
+        }
     }
 
     protected boolean enablePlugin(String name) {
@@ -239,6 +244,11 @@ public class PluginManager {
     }
 
     public void disablePlugins() {
+        // call preDisable-methods
+        for (AbstractPlugin plugin : this.loadedPlugins.values()) {
+            plugin.onPreDisable();
+        }
+
         // disable all plugins
         for (AbstractPlugin plugin : this.loadedPlugins.values()) {
             if (plugin.disable()) {

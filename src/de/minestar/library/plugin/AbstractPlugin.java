@@ -34,9 +34,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import de.minestar.library.plugin.annotations.OnDisable;
-import de.minestar.library.plugin.annotations.OnEnable;
 import de.minestar.library.plugin.annotations.Plugin;
+import de.minestar.library.plugin.annotations.PostEnable;
+import de.minestar.library.plugin.annotations.PreDisable;
 import de.minestar.library.plugin.exceptions.MissingHardDependencyException;
 import de.minestar.library.plugin.units.Priority;
 
@@ -47,7 +47,7 @@ public class AbstractPlugin {
     private Object instance;
     private final String name, version;
     private final String[] softDependencies, hardDependencies;
-    private final Map<Priority, List<Method>> onEnableMap, onDisableMap;
+    private final Map<Priority, List<Method>> postEnableMap, preDisableMap;
 
     protected AbstractPlugin(PluginManager pluginManager, Class<?> clazz) throws InstantiationException, IllegalAccessException {
         this.instance = clazz.newInstance();
@@ -56,8 +56,8 @@ public class AbstractPlugin {
         this.version = this.fetchPluginVersion();
         this.softDependencies = this.fetchSoftDependencies();
         this.hardDependencies = this.fetchHardDependencies();
-        this.onEnableMap = this.fetchMethods(OnEnable.class);
-        this.onDisableMap = this.fetchMethods(OnDisable.class);
+        this.postEnableMap = this.fetchMethods(PostEnable.class);
+        this.preDisableMap = this.fetchMethods(PreDisable.class);
         this.enabled = false;
     }
 
@@ -125,11 +125,11 @@ public class AbstractPlugin {
 
                     // fetch level
                     Priority level = Priority.THIRD_MOST;
-                    if (OnEnable.class.isAssignableFrom(annotation.getClass())) {
-                        OnEnable onEnable = (OnEnable) annotation;
+                    if (PostEnable.class.isAssignableFrom(annotation.getClass())) {
+                        PostEnable onEnable = (PostEnable) annotation;
                         level = onEnable.priority();
-                    } else if (OnDisable.class.isAssignableFrom(annotation.getClass())) {
-                        OnDisable onDisable = (OnDisable) annotation;
+                    } else if (PreDisable.class.isAssignableFrom(annotation.getClass())) {
+                        PreDisable onDisable = (PreDisable) annotation;
                         level = onDisable.priority();
                     }
 
@@ -187,16 +187,29 @@ public class AbstractPlugin {
                 throw new MissingHardDependencyException("Plugin not enabled: " + this.getName() + " [ v" + this.getVersion() + " ] -> Harddependency not found: " + pluginName + " !");
             }
         }
-
-        this.callMethods(this.onEnableMap);
         this.enabled = true;
         return true;
     }
 
     protected boolean disable() {
         if (this.enabled) {
-            this.callMethods(this.onDisableMap);
             this.enabled = false;
+            return true;
+        }
+        return false;
+    }
+
+    protected boolean onPostEnable() {
+        if (this.enabled) {
+            this.callMethods(this.postEnableMap);
+            return true;
+        }
+        return false;
+    }
+
+    protected boolean onPreDisable() {
+        if (this.enabled) {
+            this.callMethods(this.preDisableMap);
             return true;
         }
         return false;
