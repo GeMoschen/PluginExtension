@@ -30,17 +30,17 @@ public class MissingDependencyException extends Exception {
 
     private static final long serialVersionUID = 3372322759235107589L;
 
-    private final PluginDefinition plugin;
+    private final PluginDefinition pluginDefinition;
     private final String dependingPlugin;
 
-    public MissingDependencyException(String string, PluginDefinition plugin, String dependingPlugin) {
+    public MissingDependencyException(String string, PluginDefinition pluginDefinition, String dependingPlugin) {
         super(string);
-        this.plugin = plugin;
+        this.pluginDefinition = pluginDefinition;
         this.dependingPlugin = dependingPlugin;
     }
 
-    public PluginDefinition getPlugin() {
-        return plugin;
+    public PluginDefinition getPluginDefinition() {
+        return pluginDefinition;
     }
 
     public String getDependingPlugin() {

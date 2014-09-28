@@ -91,9 +91,9 @@ public class PluginManager {
                         if (clazz != null) {
                             if (!map.containsKey(clazz.getSimpleName())) {
                                 // create "AbstractPlugin"
-                                PluginDefinition plugin = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
-                                if (plugin != null) {
-                                    map.put(plugin.getName(), plugin);
+                                PluginDefinition pluginDefinition = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
+                                if (pluginDefinition != null) {
+                                    map.put(pluginDefinition.getName(), pluginDefinition);
                                 }
                             } else {
                                 throw new PluginExistsException("A plugin named '" + clazz.getSimpleName() + "' already exists!");
@@ -156,9 +156,9 @@ public class PluginManager {
     }
 
     public <T> T getPlugin(Class<? extends ExternalPlugin> clazz) {
-        PluginDefinition plugin = this.enabledPlugins.get(clazz.getSimpleName());
-        if (plugin != null) {
-            return plugin.getInstance(clazz);
+        PluginDefinition pluginDefinition = this.enabledPlugins.get(clazz.getSimpleName());
+        if (pluginDefinition != null) {
+            return pluginDefinition.getInstance(clazz);
         }
         return null;
     }
@@ -167,31 +167,31 @@ public class PluginManager {
         return this.loadedPlugins.get(name);
     }
 
-    private void enablePlugin(PluginDefinition plugin) {
+    private void enablePlugin(PluginDefinition pluginDefinition) {
         // catch null
-        if (plugin == null) {
+        if (pluginDefinition == null) {
             return;
         }
 
         try {
             // check for enabled plugins with the same name
-            if (this.enabledPlugins.containsKey(plugin.getName())) {
+            if (this.enabledPlugins.containsKey(pluginDefinition.getName())) {
                 // if the name is the same, but the objects are different =>
                 // throw an exception
-                if (!this.enabledPlugins.get(plugin.getName()).equals(plugin)) {
-                    throw new PluginExistsException("A different plugin named '" + plugin.getName() + "' already exists!");
+                if (!this.enabledPlugins.get(pluginDefinition.getName()).equals(pluginDefinition)) {
+                    throw new PluginExistsException("A different plugin named '" + pluginDefinition.getName() + "' already exists!");
                 } else {
                     return;
                 }
             }
 
             // enable plugin, only if it is disabled
-            if (!plugin.isEnabled()) {
-                if (plugin.enable()) {
-                    this.enabledPlugins.put(plugin.getName(), plugin);
-                    System.out.println("Plugin enabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+            if (!pluginDefinition.isEnabled()) {
+                if (pluginDefinition.enable()) {
+                    this.enabledPlugins.put(pluginDefinition.getName(), pluginDefinition);
+                    System.out.println("Plugin enabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
                 } else {
-                    System.out.println("Plugin not enabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+                    System.out.println("Plugin not enabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
                 }
             }
         } catch (PluginExistsException print) {
@@ -210,13 +210,13 @@ public class PluginManager {
         checkForCircularDependencies();
 
         // enable all plugins
-        for (PluginDefinition plugin : this.loadedPlugins.values()) {
-            this.enablePlugin(plugin);
+        for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
+            this.enablePlugin(pluginDefinition);
         }
 
         // call postEnable-methods
-        for (PluginDefinition plugin : this.enabledPlugins.values()) {
-            plugin.onPostEnable();
+        for (PluginDefinition pluginDefinition : this.enabledPlugins.values()) {
+            pluginDefinition.onPostEnable();
         }
     }
 
@@ -226,15 +226,15 @@ public class PluginManager {
         while (!missingCheckCompleted) {
             missingCheckCompleted = true;
             try {
-                for (PluginDefinition plugin : this.loadedPlugins.values()) {
-                    plugin.updateDependencies();
+                for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
+                    pluginDefinition.updateDependencies();
                 }
             } catch (MissingDependencyException print) {
                 // print the error
                 System.err.println(print.getMessage());
 
                 // remove the plugin
-                this.loadedPlugins.remove(print.getPlugin().getName());
+                this.loadedPlugins.remove(print.getPluginDefinition().getName());
 
                 // reset "missingCheckCompleted"
                 missingCheckCompleted = false;
@@ -248,16 +248,16 @@ public class PluginManager {
         while (!circularCheckCompleted) {
             circularCheckCompleted = true;
             try {
-                for (PluginDefinition plugin : this.loadedPlugins.values()) {
-                    plugin.checkForCircularDependencies(plugin, new ArrayList<PluginDefinition>());
+                for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
+                    pluginDefinition.checkForCircularDependencies(pluginDefinition, new ArrayList<PluginDefinition>());
                 }
             } catch (CircularDependencyException print) {
                 // print the error
                 System.err.println(print.getMessage());
 
                 // remove the plugins
-                this.loadedPlugins.remove(print.getPluginOne().getName());
-                this.loadedPlugins.remove(print.getPluginTwo().getName());
+                this.loadedPlugins.remove(print.getFirstPluginDefinition().getName());
+                this.loadedPlugins.remove(print.getSecondPluginDefinition().getName());
 
                 // reset "circularCheckCompleted"
                 circularCheckCompleted = false;
@@ -267,33 +267,33 @@ public class PluginManager {
 
     protected boolean disablePlugin(String name) {
         // fetch "AbstractPlugin"
-        PluginDefinition plugin = this.enabledPlugins.get(name);
-        if (plugin == null) {
+        PluginDefinition pluginDefinition = this.enabledPlugins.get(name);
+        if (pluginDefinition == null) {
             return false;
         }
 
         // disable plugin
-        if (plugin.disable()) {
-            this.enabledPlugins.remove(plugin.getName());
-            System.out.println("Plugin disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+        if (pluginDefinition.disable()) {
+            this.enabledPlugins.remove(pluginDefinition.getName());
+            System.out.println("Plugin disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
             return true;
         }
-        System.out.println("Plugin not disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+        System.out.println("Plugin not disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
         return false;
     }
 
     public void disablePlugins() {
         // call preDisable-methods
-        for (PluginDefinition plugin : this.enabledPlugins.values()) {
-            plugin.onPreDisable();
+        for (PluginDefinition pluginDefinition : this.enabledPlugins.values()) {
+            pluginDefinition.onPreDisable();
         }
 
         // disable all plugins
-        for (PluginDefinition plugin : this.enabledPlugins.values()) {
-            if (plugin.disable()) {
-                System.out.println("Plugin disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+        for (PluginDefinition pluginDefinition : this.enabledPlugins.values()) {
+            if (pluginDefinition.disable()) {
+                System.out.println("Plugin disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
             } else {
-                System.out.println("Plugin not disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+                System.out.println("Plugin not disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
             }
         }
 
@@ -325,8 +325,8 @@ public class PluginManager {
 
     public void listPlugins() {
         System.out.println("Plugins found: " + this.loadedPlugins.size());
-        for (PluginDefinition plugin : this.loadedPlugins.values()) {
-            System.out.println("-> " + plugin.getName() + " [ v" + plugin.getVersion() + " ]");
+        for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
+            System.out.println("-> " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]");
         }
     }
 

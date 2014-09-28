@@ -30,20 +30,20 @@ public class CircularDependencyException extends Exception {
 
     private static final long serialVersionUID = -804838573355755624L;
 
-    private final PluginDefinition pluginOne, pluginTwo;
+    private final PluginDefinition firstPluginDefinition, secondPluginDefinition;
 
-    public CircularDependencyException(String string, PluginDefinition pluginOne, PluginDefinition pluginTwo) {
+    public CircularDependencyException(String string, PluginDefinition firstPluginDefinition, PluginDefinition secondPluginDefinition) {
         super(string);
-        this.pluginOne = pluginOne;
-        this.pluginTwo = pluginTwo;
+        this.firstPluginDefinition = firstPluginDefinition;
+        this.secondPluginDefinition = secondPluginDefinition;
     }
 
-    public PluginDefinition getPluginOne() {
-        return pluginOne;
+    public PluginDefinition getFirstPluginDefinition() {
+        return firstPluginDefinition;
     }
 
-    public PluginDefinition getPluginTwo() {
-        return pluginTwo;
+    public PluginDefinition getSecondPluginDefinition() {
+        return secondPluginDefinition;
     }
 
 }
