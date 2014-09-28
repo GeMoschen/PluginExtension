@@ -177,7 +177,7 @@ public class PluginDefinition {
 
         // iterate and search plugins
         for (String dependency : this.dependencies) {
-            PluginDefinition plugin = this.pluginManager.getPlugin(dependency);
+            PluginDefinition plugin = this.pluginManager.getLoadedPlugin(dependency);
             if (plugin == null) {
                 throw new MissingDependencyException("Plugin '" + this.name + "' is missing depending plugin '" + dependency + "'. Plugin will be ignored!", this, dependency);
             } else {
@@ -186,7 +186,7 @@ public class PluginDefinition {
         }
     }
 
-    public void checkForCircularDependencies(PluginDefinition father, List<PluginDefinition> list) throws CircularDependencyException {
+    protected void checkForCircularDependencies(PluginDefinition father, List<PluginDefinition> list) throws CircularDependencyException {
         // check, if we are already in the set
         if (list.contains(this)) {
             throw new CircularDependencyException("Circular dependency between '" + this.getName() + "' and '" + father.getName() + "' found. Both plugins will be ignored!", this, father);
@@ -214,7 +214,7 @@ public class PluginDefinition {
         return false;
     }
 
-    protected boolean onPostEnable() {
+    protected boolean callPostEnableMethods() {
         if (this.enabled) {
             this.callMethods(this.postEnableMap);
             return true;
@@ -222,7 +222,7 @@ public class PluginDefinition {
         return false;
     }
 
-    protected boolean onPreDisable() {
+    protected boolean callPreDisableMethods() {
         if (this.enabled) {
             this.callMethods(this.preDisableMap);
             return true;
@@ -231,7 +231,7 @@ public class PluginDefinition {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T getInstance(Class<?> clazz) {
+    protected <T> T getInstance(Class<? extends ExternalPlugin> clazz) {
         return (T) instance;
     }
 

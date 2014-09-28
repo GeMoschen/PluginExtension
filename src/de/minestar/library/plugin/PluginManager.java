@@ -148,10 +148,10 @@ public class PluginManager {
     }
 
     public boolean isPluginEnabled(String name) {
-        return this.hasPlugin(name) && this.getPlugin(name).isEnabled();
+        return this.hasPlugin(name) && this.getLoadedPlugin(name).isEnabled();
     }
 
-    protected boolean hasPlugin(String name) {
+    public boolean hasPlugin(String name) {
         return this.loadedPlugins.containsKey(name);
     }
 
@@ -163,7 +163,7 @@ public class PluginManager {
         return null;
     }
 
-    protected PluginDefinition getPlugin(String name) {
+    protected PluginDefinition getLoadedPlugin(String name) {
         return this.loadedPlugins.get(name);
     }
 
@@ -191,7 +191,7 @@ public class PluginManager {
                     this.enabledPlugins.put(pluginDefinition.getName(), pluginDefinition);
                     System.out.println("Plugin enabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
                 } else {
-                    System.out.println("Plugin not enabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
+                    System.err.println("Plugin not enabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
                 }
             }
         } catch (PluginExistsException print) {
@@ -204,10 +204,10 @@ public class PluginManager {
         this.disablePlugins();
 
         // check missing dependencies
-        checkForMissingDependencies();
+        this.checkForMissingDependencies();
 
         // check circular dependencies
-        checkForCircularDependencies();
+        this.checkForCircularDependencies();
 
         // enable all plugins
         for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
@@ -216,7 +216,7 @@ public class PluginManager {
 
         // call postEnable-methods
         for (PluginDefinition pluginDefinition : this.enabledPlugins.values()) {
-            pluginDefinition.onPostEnable();
+            pluginDefinition.callPostEnableMethods();
         }
     }
 
@@ -265,27 +265,10 @@ public class PluginManager {
         }
     }
 
-    protected boolean disablePlugin(String name) {
-        // fetch "AbstractPlugin"
-        PluginDefinition pluginDefinition = this.enabledPlugins.get(name);
-        if (pluginDefinition == null) {
-            return false;
-        }
-
-        // disable plugin
-        if (pluginDefinition.disable()) {
-            this.enabledPlugins.remove(pluginDefinition.getName());
-            System.out.println("Plugin disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
-            return true;
-        }
-        System.out.println("Plugin not disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
-        return false;
-    }
-
     public void disablePlugins() {
         // call preDisable-methods
         for (PluginDefinition pluginDefinition : this.enabledPlugins.values()) {
-            pluginDefinition.onPreDisable();
+            pluginDefinition.callPreDisableMethods();
         }
 
         // disable all plugins
@@ -293,7 +276,7 @@ public class PluginManager {
             if (pluginDefinition.disable()) {
                 System.out.println("Plugin disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
             } else {
-                System.out.println("Plugin not disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
+                System.err.println("Plugin not disabled: " + pluginDefinition.getName() + " [ v" + pluginDefinition.getVersion() + " ]!");
             }
         }
 
