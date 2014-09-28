@@ -30,11 +30,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import de.minestar.library.plugin.annotations.OnDisable;
 import de.minestar.library.plugin.annotations.OnEnable;
 import de.minestar.library.plugin.annotations.Plugin;
+import de.minestar.library.plugin.exceptions.MissingHardDependencyException;
 import de.minestar.library.plugin.units.Priority;
 
 public class AbstractPlugin {
@@ -43,16 +46,19 @@ public class AbstractPlugin {
     private boolean enabled;
     private Object instance;
     private final String name, version;
+    private final String[] softDependencies, hardDependencies;
     private final Map<Priority, List<Method>> onEnableMap, onDisableMap;
 
-    public AbstractPlugin(PluginManager pluginManager, Class<?> clazz) throws InstantiationException, IllegalAccessException {
+    protected AbstractPlugin(PluginManager pluginManager, Class<?> clazz) throws InstantiationException, IllegalAccessException {
         this.instance = clazz.newInstance();
         this.pluginManager = pluginManager;
         this.name = this.fetchPluginName();
         this.version = this.fetchPluginVersion();
-        this.enabled = false;
+        this.softDependencies = this.fetchSoftDependencies();
+        this.hardDependencies = this.fetchHardDependencies();
         this.onEnableMap = this.fetchMethods(OnEnable.class);
         this.onDisableMap = this.fetchMethods(OnDisable.class);
+        this.enabled = false;
     }
 
     private String fetchPluginName() {
@@ -70,6 +76,32 @@ public class AbstractPlugin {
             }
         }
         return "UNKNOWN";
+    }
+
+    private String[] fetchSoftDependencies() {
+        // fetch annotations
+        Annotation[] annotations = this.instance.getClass().getDeclaredAnnotations();
+        for (Annotation annotation : annotations) {
+            // if the class is "Plugin", return the softdependencies
+            if (annotation instanceof Plugin) {
+                Plugin plugin = (Plugin) annotation;
+                return plugin.softDepend();
+            }
+        }
+        return new String[0];
+    }
+
+    private String[] fetchHardDependencies() {
+        // fetch annotations
+        Annotation[] annotations = this.instance.getClass().getDeclaredAnnotations();
+        for (Annotation annotation : annotations) {
+            // if the class is "Plugin", return the harddependencies
+            if (annotation instanceof Plugin) {
+                Plugin plugin = (Plugin) annotation;
+                return plugin.hardDepend();
+            }
+        }
+        return new String[0];
     }
 
     private Map<Priority, List<Method>> fetchMethods(Class<?> clazz) {
@@ -106,6 +138,9 @@ public class AbstractPlugin {
                         map.put(level, new ArrayList<Method>());
                     }
 
+                    // set accessible
+                    method.setAccessible(true);
+
                     // append the method
                     map.get(level).add(method);
                 }
@@ -127,16 +162,38 @@ public class AbstractPlugin {
         }
     }
 
-    public boolean enable() {
-        if (!this.enabled) {
-            this.callMethods(this.onEnableMap);
-            this.enabled = true;
-            return true;
-        }
-        return false;
+    protected boolean enable() throws MissingHardDependencyException {
+        return this.enable(new TreeSet<String>());
     }
 
-    public boolean disable() {
+    protected boolean enable(Set<String> activatedPlugins) throws MissingHardDependencyException {
+        // plugin is already activated
+        if (activatedPlugins.contains(this.name) || this.enabled) {
+            return true;
+        }
+
+        // load soft-dependencies
+        for (String pluginName : this.softDependencies) {
+            if (this.pluginManager.enablePlugin(pluginName)) {
+                activatedPlugins.add(pluginName);
+            }
+        }
+
+        // load hard-dependencies
+        for (String pluginName : this.hardDependencies) {
+            if (this.pluginManager.hasPlugin(pluginName) && this.pluginManager.enablePlugin(pluginName, activatedPlugins)) {
+                activatedPlugins.add(pluginName);
+            } else {
+                throw new MissingHardDependencyException("Plugin not enabled: " + this.getName() + " [ v" + this.getVersion() + " ] -> Harddependency not found: " + pluginName + " !");
+            }
+        }
+
+        this.callMethods(this.onEnableMap);
+        this.enabled = true;
+        return true;
+    }
+
+    protected boolean disable() {
         if (this.enabled) {
             this.callMethods(this.onDisableMap);
             this.enabled = false;
@@ -151,20 +208,15 @@ public class AbstractPlugin {
     //
     // //////////////////////////////////////////////////////////////////////////////////////
 
-    public String getName() {
+    protected String getName() {
         return this.name;
     }
 
-    public String getVersion() {
+    protected String getVersion() {
         return this.version;
     }
 
-    public PluginManager getPluginManager() {
-        return pluginManager;
-    }
-
-    public boolean isEnabled() {
+    protected boolean isEnabled() {
         return this.enabled;
     }
-
 }

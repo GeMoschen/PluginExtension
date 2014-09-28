@@ -22,20 +22,19 @@
  * SOFTWARE.
  */
 
-package de.minestar.library.plugin.annotations;
+import de.minestar.library.plugin.annotations.OnEnable;
+import de.minestar.library.plugin.annotations.Plugin;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+@Plugin(version = "1.0", softDepend = { "BSoftDependPlugin" }, hardDepend = { "ZHardDependPlugin" })
+public class ATestPlugin {
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Plugin {
+    @OnEnable
+    private void enable() {
+        System.out.println("enabling....");
+    }
 
-    public String version() default "UNKNOWN";
-
-    public String[] softDepend() default {};
-
-    public String[] hardDepend() default {};
+    @OnEnable
+    public void enable2() {
+        System.out.println("enabling 2....");
+    }
 }

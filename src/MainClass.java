@@ -24,23 +24,42 @@
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 
 import de.minestar.library.plugin.PluginManager;
 
 public class MainClass {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         PluginManager pm = new PluginManager(new File(args[0]));
-        System.out.println("Plugins found: " + pm.getRegisteredClasses().size());
-        for (Map.Entry<String, Class<?>> entry : pm.getRegisteredClasses().entrySet()) {
-            System.out.println("-> " + entry.getKey());
-        }
+        pm.listPlugins();
 
-        System.out.println("\nEnabling all plugins...");
+        // start up
+        System.out.println("\n---------------------------------------");
+        System.out.println("Enabling all plugins...");
+        System.out.println("---------------------------------------");
         pm.enablePlugins();
 
-        System.out.println("\nDisabling all plugins...");
+        // full reload
+        System.out.println("\n---------------------------------------");
+        System.out.println("Reload #1 coming in 2000ms...");
+        System.out.println("---------------------------------------");
+        Thread.sleep(2000);
+        pm.reloadAllPlugins();
+
+        // current reload
+        System.out.println("\n---------------------------------------");
+        System.out.println("Reload #2 coming in 2000ms...");
+        System.out.println("---------------------------------------");
+        Thread.sleep(2000);
+        pm.reloadLoadedPlugins();
+
+        // disable
+        System.out.println("\n---------------------------------------");
+        System.out.println("Disabling all plugins in 2000ms...");
+        System.out.println("---------------------------------------");
+        Thread.sleep(2000);
         pm.disablePlugins();
+
+        System.out.println("\nDONE!");
     }
 }

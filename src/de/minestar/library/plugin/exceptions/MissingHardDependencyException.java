@@ -22,20 +22,14 @@
  * SOFTWARE.
  */
 
-package de.minestar.library.plugin.annotations;
+package de.minestar.library.plugin.exceptions;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+public class MissingHardDependencyException extends Exception {
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Plugin {
+    private static final long serialVersionUID = -8373240683172491427L;
 
-    public String version() default "UNKNOWN";
+    public MissingHardDependencyException(String string) {
+        super(string);
+    }
 
-    public String[] softDepend() default {};
-
-    public String[] hardDepend() default {};
 }

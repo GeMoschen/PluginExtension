@@ -22,36 +22,8 @@
  * SOFTWARE.
  */
 
-import de.minestar.library.plugin.annotations.OnDisable;
-import de.minestar.library.plugin.annotations.OnEnable;
 import de.minestar.library.plugin.annotations.Plugin;
-import de.minestar.library.plugin.units.Priority;
 
 @Plugin(version = "1.0")
-public class TestPlugin {
-
-    @OnEnable(level = Priority.SECOND_MOST)
-    public void onEnableMethod1() {
-        System.out.println("onEnableMethod1");
-    }
-
-    @OnEnable(level = Priority.FIRST_MOST)
-    public void onEnableMethod2() {
-        System.out.println("onEnableMethod2");
-    }
-
-    @OnDisable(level = Priority.THIRD_MOST)
-    public void onDisableMethod1() {
-        System.out.println("onDisableMethod1");
-    }
-
-    @OnDisable(level = Priority.SECOND_MOST)
-    public void onDisableMethod2() {
-        System.out.println("onDisableMethod2");
-    }
-
-    @OnDisable(level = Priority.FIRST_MOST)
-    public void onDisableMethod3() {
-        System.out.println("onDisableMethod3");
-    }
+public class BSoftDependPlugin {
 }
