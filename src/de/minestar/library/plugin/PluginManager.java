@@ -32,9 +32,8 @@ import java.net.URLClassLoader;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.TreeMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -43,25 +42,32 @@ import de.minestar.library.plugin.exceptions.PluginExistsException;
 
 public class PluginManager {
 
-    public final Set<Class<?>> registeredClasses;
+    public final Map<String, Class<?>> registeredClasses;
     public Map<String, AbstractPlugin> loadedPlugins;
 
     public PluginManager(File folder) throws IOException {
-        this.registeredClasses = this.searchPlugins(folder);
-        this.loadedPlugins = new HashMap<String, AbstractPlugin>();
+        this(folder, false);
     }
 
-    public Set<Class<?>> getRegisteredClasses() {
-        return Collections.unmodifiableSet(this.registeredClasses);
+    public PluginManager(File folder, boolean enablePlugins) throws IOException {
+        this.registeredClasses = this.searchPlugins(folder);
+        this.loadedPlugins = new HashMap<String, AbstractPlugin>();
+        if (enablePlugins) {
+            this.enablePlugins();
+        }
+    }
+
+    public Map<String, Class<?>> getRegisteredClasses() {
+        return Collections.unmodifiableMap(this.registeredClasses);
     }
 
     public Map<String, AbstractPlugin> getLoadedPlugins() {
         return Collections.unmodifiableMap(this.loadedPlugins);
     }
 
-    private Set<Class<?>> searchPlugins(File folder) throws IOException {
+    private Map<String, Class<?>> searchPlugins(File folder) throws IOException {
         // create new set
-        Set<Class<?>> set = new HashSet<Class<?>>();
+        Map<String, Class<?>> map = new TreeMap<String, Class<?>>();
 
         // folder must exist
         if (folder.exists()) {
@@ -87,10 +93,10 @@ public class PluginManager {
                         // get the entry
                         clazz = this.processJarEntry(cl, (JarEntry) e.nextElement());
                         if (clazz != null) {
-                            if (!set.contains(clazz)) {
-                                set.add(clazz);
+                            if (!map.containsKey(clazz.getSimpleName())) {
+                                map.put(clazz.getSimpleName(), clazz);
                             } else {
-                                throw new PluginExistsException("A plugin named '" + clazz.toString().substring(6) + "' already exists!");
+                                throw new PluginExistsException("A plugin named '" + clazz.getSimpleName() + "' already exists!");
                             }
                         }
                     } catch (PluginExistsException print) {
@@ -102,7 +108,7 @@ public class PluginManager {
                 jarFile.close();
             }
         }
-        return Collections.unmodifiableSet(set);
+        return Collections.unmodifiableMap(map);
     }
 
     private Class<?> processJarEntry(URLClassLoader cl, JarEntry jarEntry) {
@@ -141,32 +147,76 @@ public class PluginManager {
         return false;
     }
 
-    public void loadAllPlugins() {
+    public void enablePlugins() {
         // unload first
-        this.unloadAllPlugins();
+        this.disablePlugins();
 
         // enable all plugins
-        for (Class<?> clazz : this.registeredClasses) {
-            AbstractPlugin plugin = new AbstractPlugin(this, clazz);
-            // ignore plugins with the same name
-            try {
-                if (this.loadedPlugins.containsKey(plugin.getName())) {
-                    throw new PluginExistsException("A plugin named '" + plugin.getName() + "' already exists!");
-                }
-                plugin.enable();
-                this.loadedPlugins.put(plugin.getName(), plugin);
-                System.out.println("Enabled: " + plugin.getName() + " ( v" + plugin.getVersion() + " )");
-            } catch (PluginExistsException print) {
-                print.printStackTrace();
-            }
+        for (Class<?> clazz : this.registeredClasses.values()) {
+            this.enablePlugin(clazz);
         }
     }
 
-    public void unloadAllPlugins() {
+    public boolean enablePlugin(String name) {
+        return this.enablePlugin(this.registeredClasses.get(name));
+    }
+
+    public boolean enablePlugin(Class<?> clazz) {
+        // catch null
+        if (clazz == null) {
+            return false;
+        }
+        try {
+            // create "AbstractPlugin"
+            AbstractPlugin plugin = new AbstractPlugin(this, clazz);
+
+            // ignore plugins with the same name
+            if (this.loadedPlugins.containsKey(plugin.getName())) {
+                throw new PluginExistsException("A plugin named '" + plugin.getName() + "' already exists!");
+            }
+            if (plugin.enable()) {
+                this.loadedPlugins.put(plugin.getName(), plugin);
+                System.out.println("Plugin enabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+                return true;
+            }
+            System.out.println("Plugin not enabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+            return false;
+        } catch (PluginExistsException print) {
+            print.printStackTrace();
+        } catch (InstantiationException print) {
+            print.printStackTrace();
+        } catch (IllegalAccessException print) {
+            print.printStackTrace();
+        }
+        System.out.println("Plugin not enabled: " + clazz.getSimpleName() + "!");
+        return false;
+    }
+
+    public boolean disablePlugin(String name) {
+        // fetch "AbstractPlugin"
+        AbstractPlugin plugin = this.loadedPlugins.get(name);
+        if (plugin == null) {
+            return false;
+        }
+
+        // disable plugin
+        if (plugin.disable()) {
+            this.loadedPlugins.remove(plugin.getName());
+            System.out.println("Plugin disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+            return true;
+        }
+        System.out.println("Plugin not disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+        return false;
+    }
+
+    public void disablePlugins() {
         // disable all plugins
         for (AbstractPlugin plugin : this.loadedPlugins.values()) {
-            plugin.disable();
-            System.out.println("Disabled: " + plugin.getName() + " ( v" + plugin.getVersion() + " )");
+            if (plugin.disable()) {
+                System.out.println("Plugin disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+            } else {
+                System.out.println("Plugin not disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+            }
         }
 
         // clear list

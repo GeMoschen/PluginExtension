@@ -33,8 +33,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Plugin {
 
-    public String name();
-
     public String version() default "UNKNOWN";
 
     public String[] softDepend() default "";

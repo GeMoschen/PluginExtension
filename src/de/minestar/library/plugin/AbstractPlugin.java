@@ -45,34 +45,18 @@ public class AbstractPlugin {
     private final String name, version;
     private final Map<Priority, List<Method>> onEnableMap, onDisableMap;
 
-    public AbstractPlugin(PluginManager pluginManager, Class<?> clazz) {
-        try {
-            this.instance = clazz.newInstance();
-        } catch (InstantiationException print) {
-            print.printStackTrace();
-        } catch (IllegalAccessException print) {
-            print.printStackTrace();
-        } finally {
-            this.pluginManager = pluginManager;
-            this.name = this.fetchPluginName();
-            this.version = this.fetchPluginVersion();
-            this.enabled = false;
-            this.onEnableMap = this.fetchMethods(OnEnable.class);
-            this.onDisableMap = this.fetchMethods(OnDisable.class);
-        }
+    public AbstractPlugin(PluginManager pluginManager, Class<?> clazz) throws InstantiationException, IllegalAccessException {
+        this.instance = clazz.newInstance();
+        this.pluginManager = pluginManager;
+        this.name = this.fetchPluginName();
+        this.version = this.fetchPluginVersion();
+        this.enabled = false;
+        this.onEnableMap = this.fetchMethods(OnEnable.class);
+        this.onDisableMap = this.fetchMethods(OnDisable.class);
     }
 
     private String fetchPluginName() {
-        // fetch annotations
-        Annotation[] annotations = this.instance.getClass().getDeclaredAnnotations();
-        for (Annotation annotation : annotations) {
-            // if the class is "Plugin", return the name
-            if (annotation instanceof Plugin) {
-                Plugin plugin = (Plugin) annotation;
-                return plugin.name();
-            }
-        }
-        return "UNKNOWN";
+        return this.instance.getClass().getSimpleName();
     }
 
     private String fetchPluginVersion() {
@@ -143,18 +127,22 @@ public class AbstractPlugin {
         }
     }
 
-    public void enable() {
+    public boolean enable() {
         if (!this.enabled) {
             this.callMethods(this.onEnableMap);
             this.enabled = true;
+            return true;
         }
+        return false;
     }
 
-    public void disable() {
+    public boolean disable() {
         if (this.enabled) {
             this.callMethods(this.onDisableMap);
             this.enabled = false;
+            return true;
         }
+        return false;
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////

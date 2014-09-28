@@ -27,7 +27,7 @@ import de.minestar.library.plugin.annotations.OnEnable;
 import de.minestar.library.plugin.annotations.Plugin;
 import de.minestar.library.plugin.units.Priority;
 
-@Plugin(name = "TestPlugin", version = "1.0")
+@Plugin(version = "1.0")
 public class TestPlugin {
 
     @OnEnable(level = Priority.SECOND_MOST)

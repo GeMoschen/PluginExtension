@@ -24,6 +24,7 @@
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 import de.minestar.library.plugin.PluginManager;
 
@@ -32,14 +33,14 @@ public class MainClass {
     public static void main(String[] args) throws IOException {
         PluginManager pm = new PluginManager(new File(args[0]));
         System.out.println("Plugins found: " + pm.getRegisteredClasses().size());
-        for (Class<?> plugin : pm.getRegisteredClasses()) {
-            System.out.println("-> " + plugin.getName());
+        for (Map.Entry<String, Class<?>> entry : pm.getRegisteredClasses().entrySet()) {
+            System.out.println("-> " + entry.getKey());
         }
 
         System.out.println("\nEnabling all plugins...");
-        pm.loadAllPlugins();
+        pm.enablePlugins();
 
         System.out.println("\nDisabling all plugins...");
-        pm.unloadAllPlugins();
+        pm.disablePlugins();
     }
 }
