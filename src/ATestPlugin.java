@@ -24,17 +24,23 @@
 
 import de.minestar.library.plugin.annotations.OnEnable;
 import de.minestar.library.plugin.annotations.Plugin;
+import de.minestar.library.plugin.units.Priority;
 
 @Plugin(version = "1.0", softDepend = { "BSoftDependPlugin" }, hardDepend = { "ZHardDependPlugin" })
 public class ATestPlugin {
 
-    @OnEnable
+    @OnEnable(priority = Priority.FIFTH_MOST)
     private void enable() {
-        System.out.println("enabling....");
+        System.out.println("enabling #1");
     }
 
-    @OnEnable
+    @OnEnable(priority = Priority.FIRST_MOST)
     public void enable2() {
-        System.out.println("enabling 2....");
+        System.out.println("enabling #2");
+    }
+
+    @OnEnable(priority = Priority.THIRD_MOST)
+    private void enable3() {
+        System.out.println("enabling #3");
     }
 }

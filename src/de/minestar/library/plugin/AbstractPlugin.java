@@ -127,10 +127,10 @@ public class AbstractPlugin {
                     Priority level = Priority.THIRD_MOST;
                     if (OnEnable.class.isAssignableFrom(annotation.getClass())) {
                         OnEnable onEnable = (OnEnable) annotation;
-                        level = onEnable.level();
+                        level = onEnable.priority();
                     } else if (OnDisable.class.isAssignableFrom(annotation.getClass())) {
                         OnDisable onDisable = (OnDisable) annotation;
-                        level = onDisable.level();
+                        level = onDisable.priority();
                     }
 
                     // create arrayList, if there is none yet

@@ -35,5 +35,5 @@ import de.minestar.library.plugin.units.Priority;
 @Target(ElementType.METHOD)
 public @interface OnEnable {
 
-    public Priority level() default Priority.THIRD_MOST;
+    public Priority priority() default Priority.THIRD_MOST;
 }
