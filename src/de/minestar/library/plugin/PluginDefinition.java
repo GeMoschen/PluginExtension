@@ -29,10 +29,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import de.minestar.library.plugin.annotations.CallMethod;
 import de.minestar.library.plugin.annotations.ExternalPlugin;
 import de.minestar.library.plugin.annotations.Plugin;
 import de.minestar.library.plugin.annotations.PostEnable;
@@ -51,6 +53,7 @@ public class PluginDefinition {
     private final String[] dependencies;
     private final List<PluginDefinition> dependingPlugins;
     private final Map<Priority, List<Method>> postEnableMap, preDisableMap;
+    private final Map<Method, CallMethod> callMethodList;
 
     protected static PluginDefinition createPlugin(PluginManager pluginManager, Class<? extends ExternalPlugin> clazz) {
         try {
@@ -62,16 +65,15 @@ public class PluginDefinition {
     }
 
     private PluginDefinition(PluginManager pluginManager, Class<? extends ExternalPlugin> clazz) throws PluginCreationFailedException {
-
         try {
             this.instance = (ExternalPlugin) clazz.newInstance();
-
             this.pluginManager = pluginManager;
             this.name = this.fetchPluginName();
             this.version = this.fetchPluginVersion();
             this.dependencies = this.fetchDependencies();
             this.postEnableMap = this.fetchMethods(PostEnable.class);
             this.preDisableMap = this.fetchMethods(PreDisable.class);
+            this.callMethodList = this.fetchCallMethods();
             this.dependingPlugins = new ArrayList<PluginDefinition>();
             this.enabled = false;
             Field field = ExternalPlugin.class.getDeclaredField("pluginManager");
@@ -80,6 +82,69 @@ public class PluginDefinition {
             field.setAccessible(false);
         } catch (Exception originalException) {
             throw new PluginCreationFailedException("Could not create plugin '" + clazz.getSimpleName() + "'!", originalException);
+        }
+    }
+
+    private Map<Method, CallMethod> fetchCallMethods() {
+        // create new map
+        Map<Method, CallMethod> map = new HashMap<Method, CallMethod>();
+
+        // fetch methods
+        Method[] methods = this.instance.getClass().getDeclaredMethods();
+        Annotation[] annotations;
+        for (Method method : methods) {
+            // fetch annotations
+            annotations = method.getDeclaredAnnotations();
+            for (Annotation annotation : annotations) {
+                // if the class is the same, append the method
+                if (annotation instanceof CallMethod) {
+                    // append the method
+                    map.put(method, (CallMethod) annotation);
+                }
+            }
+        }
+
+        // return unmodifiable map
+        return Collections.unmodifiableMap(map);
+    }
+
+    protected void afterInitializationCalls() {
+        try {
+            for (Map.Entry<Method, CallMethod> entry : this.callMethodList.entrySet()) {
+                Object[] args = new Object[entry.getValue().fieldNames().length];
+                int index = 0;
+                boolean invokeMethod = true;
+                for (String value : entry.getValue().fieldNames()) {
+                    // get field
+                    Field field = instance.getClass().getDeclaredField(value);
+
+                    // the argumenttype and the fieldtype must be equal
+                    if (!field.getType().equals(entry.getKey().getParameterTypes()[index])) {
+                        invokeMethod = false;
+                        break;
+                    }
+                    // set field accessible
+                    field.setAccessible(true);
+                    // fetch value
+                    args[index] = field.get(instance);
+                    // set field unaccessible
+                    field.setAccessible(false);
+                    // increment index
+                    index++;
+                }
+
+                // should the method be invoked?
+                if (invokeMethod) {
+                    // set method accessible
+                    entry.getKey().setAccessible(true);
+                    // invoke method
+                    entry.getKey().invoke(this.instance, args);
+                    // set method unaccessible
+                    entry.getKey().setAccessible(false);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -155,6 +220,7 @@ public class PluginDefinition {
                 }
             }
         }
+
         // return an unmodifiable map
         return Collections.unmodifiableMap(map);
     }

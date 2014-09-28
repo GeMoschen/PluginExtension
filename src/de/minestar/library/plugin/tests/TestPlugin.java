@@ -24,6 +24,7 @@ package de.minestar.library.plugin.tests;
  * SOFTWARE.
  */
 
+import de.minestar.library.plugin.annotations.CallMethod;
 import de.minestar.library.plugin.annotations.ExternalPlugin;
 import de.minestar.library.plugin.annotations.Plugin;
 import de.minestar.library.plugin.annotations.PostEnable;
@@ -33,6 +34,7 @@ import de.minestar.library.plugin.units.Priority;
 public class TestPlugin extends ExternalPlugin {
 
     private DependingPlugin plugin;
+    private int myA, myB;
 
     @PostEnable(priority = Priority.FIFTH_MOST)
     private void enable() {
@@ -43,11 +45,19 @@ public class TestPlugin extends ExternalPlugin {
     @PostEnable(priority = Priority.FIRST_MOST)
     public void enable2() {
         System.out.println("enabling #2");
+        myA = 2;
+        myB = 4;
         plugin = this.getPluginManager().getPlugin(DependingPlugin.class);
     }
 
     @PostEnable(priority = Priority.THIRD_MOST)
     private void enable3() {
         System.out.println("enabling #3");
+    }
+
+    @CallMethod(fieldNames = { "myA", "myB" })
+    private void simpleMethod(int a, int b) {
+        int result = a + b;
+        System.out.println("Result: " + result);
     }
 }
