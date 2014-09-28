@@ -21,19 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
 package de.minestar.library.plugin.annotations;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import de.minestar.library.plugin.PluginManager;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Plugin {
+public abstract class ExternalPlugin {
 
-    public String version() default "UNKNOWN";
+    private PluginManager pluginManager;
 
-    public String[] dependencies() default {};
+    protected PluginManager getPluginManager() {
+        return pluginManager;
+    }
 }

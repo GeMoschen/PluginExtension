@@ -25,40 +25,62 @@
 package de.minestar.library.plugin;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
+import de.minestar.library.plugin.annotations.ExternalPlugin;
 import de.minestar.library.plugin.annotations.Plugin;
 import de.minestar.library.plugin.annotations.PostEnable;
 import de.minestar.library.plugin.annotations.PreDisable;
-import de.minestar.library.plugin.exceptions.MissingHardDependencyException;
+import de.minestar.library.plugin.exceptions.CircularDependencyException;
+import de.minestar.library.plugin.exceptions.MissingDependencyException;
+import de.minestar.library.plugin.exceptions.PluginCreationFailedException;
 import de.minestar.library.plugin.units.Priority;
 
-public class AbstractPlugin {
+public class PluginDefinition {
 
     private final PluginManager pluginManager;
     private boolean enabled;
-    private Object instance;
+    private ExternalPlugin instance;
     private final String name, version;
-    private final String[] softDependencies, hardDependencies;
+    private final String[] dependencies;
+    private final List<PluginDefinition> dependingPlugins;
     private final Map<Priority, List<Method>> postEnableMap, preDisableMap;
 
-    protected AbstractPlugin(PluginManager pluginManager, Class<?> clazz) throws InstantiationException, IllegalAccessException {
-        this.instance = clazz.newInstance();
-        this.pluginManager = pluginManager;
-        this.name = this.fetchPluginName();
-        this.version = this.fetchPluginVersion();
-        this.softDependencies = this.fetchSoftDependencies();
-        this.hardDependencies = this.fetchHardDependencies();
-        this.postEnableMap = this.fetchMethods(PostEnable.class);
-        this.preDisableMap = this.fetchMethods(PreDisable.class);
-        this.enabled = false;
+    protected static PluginDefinition createPlugin(PluginManager pluginManager, Class<? extends ExternalPlugin> clazz) {
+        try {
+            return new PluginDefinition(pluginManager, clazz);
+        } catch (PluginCreationFailedException print) {
+            print.getOriginalException().printStackTrace();
+        }
+        return null;
+    }
+
+    private PluginDefinition(PluginManager pluginManager, Class<? extends ExternalPlugin> clazz) throws PluginCreationFailedException {
+
+        try {
+            this.instance = (ExternalPlugin) clazz.newInstance();
+
+            this.pluginManager = pluginManager;
+            this.name = this.fetchPluginName();
+            this.version = this.fetchPluginVersion();
+            this.dependencies = this.fetchDependencies();
+            this.postEnableMap = this.fetchMethods(PostEnable.class);
+            this.preDisableMap = this.fetchMethods(PreDisable.class);
+            this.dependingPlugins = new ArrayList<PluginDefinition>();
+            this.enabled = false;
+            Field field = ExternalPlugin.class.getDeclaredField("pluginManager");
+            field.setAccessible(true);
+            field.set(this.instance, this.pluginManager);
+            field.setAccessible(false);
+        } catch (Exception originalException) {
+            throw new PluginCreationFailedException("Could not create plugin '" + clazz.getSimpleName() + "'!", originalException);
+        }
     }
 
     private String fetchPluginName() {
@@ -78,27 +100,14 @@ public class AbstractPlugin {
         return "UNKNOWN";
     }
 
-    private String[] fetchSoftDependencies() {
-        // fetch annotations
-        Annotation[] annotations = this.instance.getClass().getDeclaredAnnotations();
-        for (Annotation annotation : annotations) {
-            // if the class is "Plugin", return the softdependencies
-            if (annotation instanceof Plugin) {
-                Plugin plugin = (Plugin) annotation;
-                return plugin.softDepend();
-            }
-        }
-        return new String[0];
-    }
-
-    private String[] fetchHardDependencies() {
+    private String[] fetchDependencies() {
         // fetch annotations
         Annotation[] annotations = this.instance.getClass().getDeclaredAnnotations();
         for (Annotation annotation : annotations) {
             // if the class is "Plugin", return the harddependencies
             if (annotation instanceof Plugin) {
                 Plugin plugin = (Plugin) annotation;
-                return plugin.hardDepend();
+                return plugin.dependencies();
             }
         }
         return new String[0];
@@ -162,31 +171,37 @@ public class AbstractPlugin {
         }
     }
 
-    protected boolean enable() throws MissingHardDependencyException {
-        return this.enable(new TreeSet<String>());
+    protected void updateDependencies() throws MissingDependencyException {
+        // clear list
+        this.dependingPlugins.clear();
+
+        // iterate and search plugins
+        for (String dependency : this.dependencies) {
+            PluginDefinition plugin = this.pluginManager.getPlugin(dependency);
+            if (plugin == null) {
+                throw new MissingDependencyException("Plugin '" + this.name + "' is missing depending plugin '" + dependency + "'. Plugin will be ignored!", this, dependency);
+            } else {
+                this.dependingPlugins.add(plugin);
+            }
+        }
     }
 
-    protected boolean enable(Set<String> activatedPlugins) throws MissingHardDependencyException {
-        // plugin is already activated
-        if (activatedPlugins.contains(this.name) || this.enabled) {
-            return true;
+    public void checkForCircularDependencies(PluginDefinition father, List<PluginDefinition> list) throws CircularDependencyException {
+        // check, if we are already in the set
+        if (list.contains(this)) {
+            throw new CircularDependencyException("Circular dependency between '" + this.getName() + "' and '" + father.getName() + "' found. Both plugins will be ignored!", this, father);
         }
 
-        // load soft-dependencies
-        for (String pluginName : this.softDependencies) {
-            if (this.pluginManager.enablePlugin(pluginName)) {
-                activatedPlugins.add(pluginName);
-            }
-        }
+        // add this "AbstractPlugin"
+        list.add(this);
 
-        // load hard-dependencies
-        for (String pluginName : this.hardDependencies) {
-            if (this.pluginManager.hasPlugin(pluginName) && this.pluginManager.enablePlugin(pluginName, activatedPlugins)) {
-                activatedPlugins.add(pluginName);
-            } else {
-                throw new MissingHardDependencyException("Plugin not enabled: " + this.getName() + " [ v" + this.getVersion() + " ] -> Harddependency not found: " + pluginName + " !");
-            }
+        // recursive call
+        for (PluginDefinition plugin : this.dependingPlugins) {
+            plugin.checkForCircularDependencies(this, list);
         }
+    }
+
+    protected boolean enable() {
         this.enabled = true;
         return true;
     }
@@ -215,6 +230,11 @@ public class AbstractPlugin {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
+    public <T> T getInstance(Class<?> clazz) {
+        return (T) instance;
+    }
+
     // //////////////////////////////////////////////////////////////////////////////////////
     //
     // GET & SET
@@ -232,4 +252,5 @@ public class AbstractPlugin {
     protected boolean isEnabled() {
         return this.enabled;
     }
+
 }

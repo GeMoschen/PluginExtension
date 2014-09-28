@@ -1,3 +1,5 @@
+package de.minestar.library.plugin.tests;
+
 /**
  * The MIT License (MIT)
  * 
@@ -22,14 +24,30 @@
  * SOFTWARE.
  */
 
-package de.minestar.library.plugin.exceptions;
+import de.minestar.library.plugin.annotations.ExternalPlugin;
+import de.minestar.library.plugin.annotations.Plugin;
+import de.minestar.library.plugin.annotations.PostEnable;
+import de.minestar.library.plugin.units.Priority;
 
-public class MissingHardDependencyException extends Exception {
+@Plugin(version = "1.0", dependencies = { "DependingPlugin" })
+public class TestPlugin extends ExternalPlugin {
 
-    private static final long serialVersionUID = -8373240683172491427L;
+    private DependingPlugin plugin;
 
-    public MissingHardDependencyException(String string) {
-        super(string);
+    @PostEnable(priority = Priority.FIFTH_MOST)
+    private void enable() {
+        System.out.println("enabling #1");
+        System.out.println("---> " + plugin.test);
     }
 
+    @PostEnable(priority = Priority.FIRST_MOST)
+    public void enable2() {
+        System.out.println("enabling #2");
+        plugin = this.getPluginManager().getPlugin(DependingPlugin.class);
+    }
+
+    @PostEnable(priority = Priority.THIRD_MOST)
+    private void enable3() {
+        System.out.println("enabling #3");
+    }
 }

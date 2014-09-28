@@ -22,25 +22,28 @@
  * SOFTWARE.
  */
 
-import de.minestar.library.plugin.annotations.PostEnable;
-import de.minestar.library.plugin.annotations.Plugin;
-import de.minestar.library.plugin.units.Priority;
+package de.minestar.library.plugin.exceptions;
 
-@Plugin(version = "1.0", softDepend = { "BSoftDependPlugin" }, hardDepend = { "ZHardDependPlugin" })
-public class ATestPlugin {
+import de.minestar.library.plugin.PluginDefinition;
 
-    @PostEnable(priority = Priority.FIFTH_MOST)
-    private void enable() {
-        System.out.println("enabling #1");
+public class CircularDependencyException extends Exception {
+
+    private static final long serialVersionUID = -804838573355755624L;
+
+    private final PluginDefinition pluginOne, pluginTwo;
+
+    public CircularDependencyException(String string, PluginDefinition pluginOne, PluginDefinition pluginTwo) {
+        super(string);
+        this.pluginOne = pluginOne;
+        this.pluginTwo = pluginTwo;
     }
 
-    @PostEnable(priority = Priority.FIRST_MOST)
-    public void enable2() {
-        System.out.println("enabling #2");
+    public PluginDefinition getPluginOne() {
+        return pluginOne;
     }
 
-    @PostEnable(priority = Priority.THIRD_MOST)
-    private void enable3() {
-        System.out.println("enabling #3");
+    public PluginDefinition getPluginTwo() {
+        return pluginTwo;
     }
+
 }

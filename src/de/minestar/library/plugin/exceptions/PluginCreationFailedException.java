@@ -22,8 +22,21 @@
  * SOFTWARE.
  */
 
-import de.minestar.library.plugin.annotations.Plugin;
+package de.minestar.library.plugin.exceptions;
 
-@Plugin(version = "1.0")
-public class ZHardDependPlugin {
+public class PluginCreationFailedException extends Exception {
+
+    private static final long serialVersionUID = 1428954225120255208L;
+
+    private final Exception originalException;
+
+    public PluginCreationFailedException(String string, Exception originalException) {
+        super(string);
+        this.originalException = originalException;
+    }
+
+    public Exception getOriginalException() {
+        return originalException;
+    }
+
 }

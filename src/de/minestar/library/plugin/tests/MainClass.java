@@ -1,3 +1,5 @@
+package de.minestar.library.plugin.tests;
+
 /**
  * The MIT License (MIT)
  * 

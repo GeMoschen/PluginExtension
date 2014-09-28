@@ -22,8 +22,29 @@
  * SOFTWARE.
  */
 
-import de.minestar.library.plugin.annotations.Plugin;
+package de.minestar.library.plugin.exceptions;
 
-@Plugin(version = "1.0")
-public class BSoftDependPlugin {
+import de.minestar.library.plugin.PluginDefinition;
+
+public class MissingDependencyException extends Exception {
+
+    private static final long serialVersionUID = 3372322759235107589L;
+
+    private final PluginDefinition plugin;
+    private final String dependingPlugin;
+
+    public MissingDependencyException(String string, PluginDefinition plugin, String dependingPlugin) {
+        super(string);
+        this.plugin = plugin;
+        this.dependingPlugin = dependingPlugin;
+    }
+
+    public PluginDefinition getPlugin() {
+        return plugin;
+    }
+
+    public String getDependingPlugin() {
+        return dependingPlugin;
+    }
+
 }

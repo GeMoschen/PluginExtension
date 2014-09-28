@@ -29,23 +29,23 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import de.minestar.library.plugin.annotations.ExternalPlugin;
 import de.minestar.library.plugin.annotations.Plugin;
-import de.minestar.library.plugin.exceptions.MissingHardDependencyException;
+import de.minestar.library.plugin.exceptions.CircularDependencyException;
+import de.minestar.library.plugin.exceptions.MissingDependencyException;
 import de.minestar.library.plugin.exceptions.PluginExistsException;
 
 public class PluginManager {
 
     private final File pluginFolder;
-    private final Map<String, Class<?>> registeredClasses;
-    private final Map<String, AbstractPlugin> loadedPlugins;
+    private final Map<String, PluginDefinition> loadedPlugins, enabledPlugins;
 
     public PluginManager(File pluginFolder) throws IOException {
         this(pluginFolder, false);
@@ -53,16 +53,17 @@ public class PluginManager {
 
     public PluginManager(File pluginFolder, boolean enablePlugins) throws IOException {
         this.pluginFolder = pluginFolder;
-        this.registeredClasses = this.searchPlugins(pluginFolder);
-        this.loadedPlugins = new TreeMap<String, AbstractPlugin>();
+        this.loadedPlugins = this.loadPlugins(pluginFolder);
+        this.enabledPlugins = new HashMap<String, PluginDefinition>();
         if (enablePlugins) {
             this.enablePlugins();
         }
     }
 
-    private Map<String, Class<?>> searchPlugins(File folder) throws IOException {
+    @SuppressWarnings("unchecked")
+    private Map<String, PluginDefinition> loadPlugins(File folder) throws IOException {
         // create new set
-        Map<String, Class<?>> map = new TreeMap<String, Class<?>>();
+        Map<String, PluginDefinition> map = new HashMap<String, PluginDefinition>();
 
         // folder must exist
         if (folder.exists()) {
@@ -89,7 +90,11 @@ public class PluginManager {
                         clazz = this.processJarEntry(cl, (JarEntry) e.nextElement());
                         if (clazz != null) {
                             if (!map.containsKey(clazz.getSimpleName())) {
-                                map.put(clazz.getSimpleName(), clazz);
+                                // create "AbstractPlugin"
+                                PluginDefinition plugin = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
+                                if (plugin != null) {
+                                    map.put(plugin.getName(), plugin);
+                                }
                             } else {
                                 throw new PluginExistsException("A plugin named '" + clazz.getSimpleName() + "' already exists!");
                             }
@@ -147,95 +152,129 @@ public class PluginManager {
     }
 
     protected boolean hasPlugin(String name) {
-        return this.registeredClasses.containsKey(name);
+        return this.loadedPlugins.containsKey(name);
     }
 
-    private AbstractPlugin getPlugin(String name) {
+    public <T> T getPlugin(Class<? extends ExternalPlugin> clazz) {
+        PluginDefinition plugin = this.enabledPlugins.get(clazz.getSimpleName());
+        if (plugin != null) {
+            return plugin.getInstance(clazz);
+        }
+        return null;
+    }
+
+    protected PluginDefinition getPlugin(String name) {
         return this.loadedPlugins.get(name);
+    }
+
+    private void enablePlugin(PluginDefinition plugin) {
+        // catch null
+        if (plugin == null) {
+            return;
+        }
+
+        try {
+            // check for enabled plugins with the same name
+            if (this.enabledPlugins.containsKey(plugin.getName())) {
+                // if the name is the same, but the objects are different =>
+                // throw an exception
+                if (!this.enabledPlugins.get(plugin.getName()).equals(plugin)) {
+                    throw new PluginExistsException("A different plugin named '" + plugin.getName() + "' already exists!");
+                } else {
+                    return;
+                }
+            }
+
+            // enable plugin, only if it is disabled
+            if (!plugin.isEnabled()) {
+                if (plugin.enable()) {
+                    this.enabledPlugins.put(plugin.getName(), plugin);
+                    System.out.println("Plugin enabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+                } else {
+                    System.out.println("Plugin not enabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+                }
+            }
+        } catch (PluginExistsException print) {
+            print.printStackTrace();
+        }
     }
 
     public void enablePlugins() {
         // unload first
         this.disablePlugins();
 
+        // check missing dependencies
+        checkForMissingDependencies();
+
+        // check circular dependencies
+        checkForCircularDependencies();
+
         // enable all plugins
-        for (Class<?> clazz : this.registeredClasses.values()) {
-            this.enablePlugin(clazz);
+        for (PluginDefinition plugin : this.loadedPlugins.values()) {
+            this.enablePlugin(plugin);
         }
 
         // call postEnable-methods
-        for (AbstractPlugin plugin : this.loadedPlugins.values()) {
+        for (PluginDefinition plugin : this.enabledPlugins.values()) {
             plugin.onPostEnable();
         }
     }
 
-    protected boolean enablePlugin(String name) {
-        return this.enablePlugin(this.registeredClasses.get(name));
-    }
-
-    protected boolean enablePlugin(String name, Set<String> activatedPlugins) {
-        return this.enablePlugin(this.registeredClasses.get(name), activatedPlugins);
-    }
-
-    protected boolean enablePlugin(Class<?> clazz) {
-        return this.enablePlugin(clazz, new TreeSet<String>());
-    }
-
-    protected boolean enablePlugin(Class<?> clazz, Set<String> activatedPlugins) {
-        // catch null
-        if (clazz == null) {
-            return false;
-        }
-        try {
-            // create "AbstractPlugin"
-            AbstractPlugin plugin;
-
-            // if the plugin is already loaded, fetch the "AbstractPlugin"
-            if (this.loadedPlugins.containsKey(clazz.getSimpleName())) {
-                plugin = this.loadedPlugins.get(clazz.getSimpleName());
-            } else {
-                plugin = new AbstractPlugin(this, clazz);
-            }
-
-            // ignore plugins with the same name
-            if (this.loadedPlugins.containsKey(plugin.getName()) && !this.registeredClasses.get(plugin.getName()).equals(clazz)) {
-                throw new PluginExistsException("A plugin named '" + plugin.getName() + "' already exists!");
-            }
-
-            // for later use...
-            boolean alreadyEnabled = plugin.isEnabled();
-            if (plugin.enable()) {
-                // ... if the plugin wasn't already enabled
-                if (!alreadyEnabled) {
-                    this.loadedPlugins.put(plugin.getName(), plugin);
-                    System.out.println("Plugin enabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
+    private void checkForMissingDependencies() {
+        // check for missing dependencies
+        boolean missingCheckCompleted = false;
+        while (!missingCheckCompleted) {
+            missingCheckCompleted = true;
+            try {
+                for (PluginDefinition plugin : this.loadedPlugins.values()) {
+                    plugin.updateDependencies();
                 }
-                return true;
+            } catch (MissingDependencyException print) {
+                // print the error
+                System.err.println(print.getMessage());
+
+                // remove the plugin
+                this.loadedPlugins.remove(print.getPlugin().getName());
+
+                // reset "missingCheckCompleted"
+                missingCheckCompleted = false;
             }
-            System.out.println("Plugin not enabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
-            return false;
-        } catch (PluginExistsException print) {
-            print.printStackTrace();
-        } catch (InstantiationException print) {
-            print.printStackTrace();
-        } catch (IllegalAccessException print) {
-            print.printStackTrace();
-        } catch (MissingHardDependencyException print) {
-            print.printStackTrace();
         }
-        return false;
+    }
+
+    private void checkForCircularDependencies() {
+        // check for circular dependencies
+        boolean circularCheckCompleted = false;
+        while (!circularCheckCompleted) {
+            circularCheckCompleted = true;
+            try {
+                for (PluginDefinition plugin : this.loadedPlugins.values()) {
+                    plugin.checkForCircularDependencies(plugin, new ArrayList<PluginDefinition>());
+                }
+            } catch (CircularDependencyException print) {
+                // print the error
+                System.err.println(print.getMessage());
+
+                // remove the plugins
+                this.loadedPlugins.remove(print.getPluginOne().getName());
+                this.loadedPlugins.remove(print.getPluginTwo().getName());
+
+                // reset "circularCheckCompleted"
+                circularCheckCompleted = false;
+            }
+        }
     }
 
     protected boolean disablePlugin(String name) {
         // fetch "AbstractPlugin"
-        AbstractPlugin plugin = this.loadedPlugins.get(name);
+        PluginDefinition plugin = this.enabledPlugins.get(name);
         if (plugin == null) {
             return false;
         }
 
         // disable plugin
         if (plugin.disable()) {
-            this.loadedPlugins.remove(plugin.getName());
+            this.enabledPlugins.remove(plugin.getName());
             System.out.println("Plugin disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
             return true;
         }
@@ -245,12 +284,12 @@ public class PluginManager {
 
     public void disablePlugins() {
         // call preDisable-methods
-        for (AbstractPlugin plugin : this.loadedPlugins.values()) {
+        for (PluginDefinition plugin : this.enabledPlugins.values()) {
             plugin.onPreDisable();
         }
 
         // disable all plugins
-        for (AbstractPlugin plugin : this.loadedPlugins.values()) {
+        for (PluginDefinition plugin : this.enabledPlugins.values()) {
             if (plugin.disable()) {
                 System.out.println("Plugin disabled: " + plugin.getName() + " [ v" + plugin.getVersion() + " ]!");
             } else {
@@ -259,7 +298,7 @@ public class PluginManager {
         }
 
         // clear list
-        this.loadedPlugins.clear();
+        this.enabledPlugins.clear();
     }
 
     public void reloadLoadedPlugins() {
@@ -275,19 +314,20 @@ public class PluginManager {
         this.disablePlugins();
 
         // clear old maps
-        this.registeredClasses.clear();
+        this.loadedPlugins.clear();
 
         // search plugins
-        this.registeredClasses.putAll(this.searchPlugins(this.pluginFolder));
+        this.loadedPlugins.putAll(this.loadPlugins(this.pluginFolder));
 
         // enable plugins
         this.enablePlugins();
     }
 
     public void listPlugins() {
-        System.out.println("Plugins found: " + this.registeredClasses.size());
-        for (Map.Entry<String, Class<?>> entry : this.registeredClasses.entrySet()) {
-            System.out.println("-> " + entry.getKey());
+        System.out.println("Plugins found: " + this.loadedPlugins.size());
+        for (PluginDefinition plugin : this.loadedPlugins.values()) {
+            System.out.println("-> " + plugin.getName() + " [ v" + plugin.getVersion() + " ]");
         }
     }
+
 }

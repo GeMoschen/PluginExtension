@@ -1,3 +1,5 @@
+package de.minestar.library.plugin.tests;
+
 /**
  * The MIT License (MIT)
  * 
@@ -22,18 +24,11 @@
  * SOFTWARE.
  */
 
-package de.minestar.library.plugin.annotations;
+import de.minestar.library.plugin.annotations.ExternalPlugin;
+import de.minestar.library.plugin.annotations.Plugin;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+@Plugin(version = "1.0")
+public class DependingPlugin extends ExternalPlugin {
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Plugin {
-
-    public String version() default "UNKNOWN";
-
-    public String[] dependencies() default {};
+    public String test = "Hallo Welt!";
 }
