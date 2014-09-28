@@ -41,25 +41,25 @@ public class MainClass {
         System.out.println("---------------------------------------");
         pm.enablePlugins();
 
-        // // full reload
-        // System.out.println("\n---------------------------------------");
-        // System.out.println("Reload #1 coming in 2000ms...");
-        // System.out.println("---------------------------------------");
-        // Thread.sleep(2000);
-        // pm.reloadAllPlugins();
-        //
-        // // current reload
-        // System.out.println("\n---------------------------------------");
-        // System.out.println("Reload #2 coming in 2000ms...");
-        // System.out.println("---------------------------------------");
-        // Thread.sleep(2000);
-        // pm.reloadLoadedPlugins();
-        //
+        // full reload
+        System.out.println("\n---------------------------------------");
+        System.out.println("Reload #1 coming in 2000ms...");
+        System.out.println("---------------------------------------");
+        Thread.sleep(2000);
+        pm.reloadAllPlugins();
+
+        // current reload
+        System.out.println("\n---------------------------------------");
+        System.out.println("Reload #2 coming in 2000ms...");
+        System.out.println("---------------------------------------");
+        Thread.sleep(2000);
+        pm.reloadLoadedPlugins();
+
         // disable
         System.out.println("\n---------------------------------------");
         System.out.println("Disabling all plugins in 2000ms...");
         System.out.println("---------------------------------------");
-        // Thread.sleep(2000);
+        Thread.sleep(2000);
         pm.disablePlugins();
 
         System.out.println("\nDONE!");
