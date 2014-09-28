@@ -33,6 +33,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface CallMethod {
 
+    public int priority();
+
     public String[] fieldNames();
 
 }

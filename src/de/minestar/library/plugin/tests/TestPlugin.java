@@ -55,9 +55,15 @@ public class TestPlugin extends ExternalPlugin {
         System.out.println("enabling #3");
     }
 
-    @CallMethod(fieldNames = { "myA", "myB" })
+    @CallMethod(priority = 2, fieldNames = { "myA", "myB" })
     private void simpleMethod(int a, int b) {
         int result = a + b;
-        System.out.println("Result: " + result);
+        System.out.println("Result + : " + result);
+    }
+
+    @CallMethod(priority = 3, fieldNames = { "myA", "myB" })
+    private void simpleMethod2(int a, int b) {
+        int result = a * b;
+        System.out.println("Result * : " + result);
     }
 }

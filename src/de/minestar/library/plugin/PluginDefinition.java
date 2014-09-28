@@ -42,6 +42,7 @@ import de.minestar.library.plugin.annotations.PreDisable;
 import de.minestar.library.plugin.exceptions.CircularDependencyException;
 import de.minestar.library.plugin.exceptions.MissingDependencyException;
 import de.minestar.library.plugin.exceptions.PluginCreationFailedException;
+import de.minestar.library.plugin.units.MethodCall;
 import de.minestar.library.plugin.units.Priority;
 
 public class PluginDefinition {
@@ -53,7 +54,7 @@ public class PluginDefinition {
     private final String[] dependencies;
     private final List<PluginDefinition> dependingPlugins;
     private final Map<Priority, List<Method>> postEnableMap, preDisableMap;
-    private final Map<Method, CallMethod> callMethodList;
+    private final Map<Integer, List<MethodCall>> callMethodList;
 
     protected static PluginDefinition createPlugin(PluginManager pluginManager, Class<? extends ExternalPlugin> clazz) {
         try {
@@ -85,9 +86,9 @@ public class PluginDefinition {
         }
     }
 
-    private Map<Method, CallMethod> fetchCallMethods() {
+    private Map<Integer, List<MethodCall>> fetchCallMethods() {
         // create new map
-        Map<Method, CallMethod> map = new HashMap<Method, CallMethod>();
+        Map<Integer, List<MethodCall>> map = new HashMap<Integer, List<MethodCall>>();
 
         // fetch methods
         Method[] methods = this.instance.getClass().getDeclaredMethods();
@@ -99,7 +100,11 @@ public class PluginDefinition {
                 // if the class is the same, append the method
                 if (annotation instanceof CallMethod) {
                     // append the method
-                    map.put(method, (CallMethod) annotation);
+                    CallMethod callMethod = (CallMethod) annotation;
+                    if (!map.containsKey(callMethod.priority())) {
+                        map.put(callMethod.priority(), new ArrayList<MethodCall>());
+                    }
+                    map.get(callMethod.priority()).add(new MethodCall(this.instance, method, callMethod));
                 }
             }
         }
@@ -110,37 +115,9 @@ public class PluginDefinition {
 
     protected void afterInitializationCalls() {
         try {
-            for (Map.Entry<Method, CallMethod> entry : this.callMethodList.entrySet()) {
-                Object[] args = new Object[entry.getValue().fieldNames().length];
-                int index = 0;
-                boolean invokeMethod = true;
-                for (String value : entry.getValue().fieldNames()) {
-                    // get field
-                    Field field = instance.getClass().getDeclaredField(value);
-
-                    // the argumenttype and the fieldtype must be equal
-                    if (!field.getType().equals(entry.getKey().getParameterTypes()[index])) {
-                        invokeMethod = false;
-                        break;
-                    }
-                    // set field accessible
-                    field.setAccessible(true);
-                    // fetch value
-                    args[index] = field.get(instance);
-                    // set field unaccessible
-                    field.setAccessible(false);
-                    // increment index
-                    index++;
-                }
-
-                // should the method be invoked?
-                if (invokeMethod) {
-                    // set method accessible
-                    entry.getKey().setAccessible(true);
-                    // invoke method
-                    entry.getKey().invoke(this.instance, args);
-                    // set method unaccessible
-                    entry.getKey().setAccessible(false);
+            for (List<MethodCall> list : this.callMethodList.values()) {
+                for (MethodCall methodCall : list) {
+                    methodCall.invoke();
                 }
             }
         } catch (Exception e) {
