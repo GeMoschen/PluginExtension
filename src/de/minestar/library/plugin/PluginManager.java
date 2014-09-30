@@ -88,16 +88,14 @@ public class PluginManager {
                         // get the entry
                         clazz = this.processJarEntry(cl, (JarEntry) e.nextElement());
                         if (clazz != null) {
-                            if (ExternalPlugin.class.isAssignableFrom(clazz)) {
-                                if (!map.containsKey(clazz.getSimpleName())) {
-                                    // create "AbstractPlugin"
-                                    PluginDefinition pluginDefinition = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
-                                    if (pluginDefinition != null) {
-                                        map.put(pluginDefinition.getName(), pluginDefinition);
-                                    }
-                                } else {
-                                    throw new PluginExistsException("A plugin named '" + clazz.getSimpleName() + "' already exists!");
+                            if (!map.containsKey(clazz.getSimpleName())) {
+                                // create "AbstractPlugin"
+                                PluginDefinition pluginDefinition = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
+                                if (pluginDefinition != null) {
+                                    map.put(pluginDefinition.getName(), pluginDefinition);
                                 }
+                            } else {
+                                throw new PluginExistsException("A plugin named '" + clazz.getSimpleName() + "' already exists!");
                             }
                         }
                     } catch (PluginExistsException print) {
@@ -126,8 +124,8 @@ public class PluginManager {
             // load the class
             Class<?> clazz = cl.loadClass(className);
 
-            // search for "Plugin"-Annotation
-            if (this.hasAnnotation(clazz, Plugin.class)) {
+            // check class and "Plugin"-Annotation
+            if (ExternalPlugin.class.isAssignableFrom(clazz) && this.hasAnnotation(clazz, Plugin.class)) {
                 return clazz;
             }
         } catch (ClassNotFoundException print) {
