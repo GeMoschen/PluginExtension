@@ -88,14 +88,16 @@ public class PluginManager {
                         // get the entry
                         clazz = this.processJarEntry(cl, (JarEntry) e.nextElement());
                         if (clazz != null) {
-                            if (!map.containsKey(clazz.getSimpleName()) && ExternalPlugin.class.isAssignableFrom(clazz)) {
-                                // create "AbstractPlugin"
-                                PluginDefinition pluginDefinition = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
-                                if (pluginDefinition != null) {
-                                    map.put(pluginDefinition.getName(), pluginDefinition);
+                            if (ExternalPlugin.class.isAssignableFrom(clazz)) {
+                                if (!map.containsKey(clazz.getSimpleName())) {
+                                    // create "AbstractPlugin"
+                                    PluginDefinition pluginDefinition = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
+                                    if (pluginDefinition != null) {
+                                        map.put(pluginDefinition.getName(), pluginDefinition);
+                                    }
+                                } else {
+                                    throw new PluginExistsException("A plugin named '" + clazz.getSimpleName() + "' already exists!");
                                 }
-                            } else {
-                                throw new PluginExistsException("A plugin named '" + clazz.getSimpleName() + "' already exists!");
                             }
                         }
                     } catch (PluginExistsException print) {
