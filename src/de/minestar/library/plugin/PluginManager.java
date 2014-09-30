@@ -202,11 +202,11 @@ public class PluginManager {
         // unload first
         this.disablePlugins();
 
-        // check missing dependencies
-        this.checkForMissingDependencies();
-
         // check circular dependencies
         this.checkForCircularDependencies();
+
+        // check missing dependencies
+        this.checkForMissingDependencies();
 
         // enable all plugins
         for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
