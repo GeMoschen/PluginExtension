@@ -26,8 +26,8 @@ package de.minestar.library.plugin.units;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+import de.minestar.library.plugin.ExternalPlugin;
 import de.minestar.library.plugin.annotations.CallMethod;
-import de.minestar.library.plugin.annotations.ExternalPlugin;
 
 public class MethodCall {
 

@@ -24,8 +24,8 @@ package de.minestar.library.plugin.tests;
  * SOFTWARE.
  */
 
+import de.minestar.library.plugin.ExternalPlugin;
 import de.minestar.library.plugin.annotations.CallMethod;
-import de.minestar.library.plugin.annotations.ExternalPlugin;
 import de.minestar.library.plugin.annotations.Plugin;
 import de.minestar.library.plugin.annotations.PostEnable;
 import de.minestar.library.plugin.units.Priority;

@@ -21,9 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package de.minestar.library.plugin.annotations;
+package de.minestar.library.plugin;
 
-import de.minestar.library.plugin.PluginManager;
 
 public abstract class ExternalPlugin {
 

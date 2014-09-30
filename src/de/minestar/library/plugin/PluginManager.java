@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-import de.minestar.library.plugin.annotations.ExternalPlugin;
 import de.minestar.library.plugin.annotations.Plugin;
 import de.minestar.library.plugin.exceptions.CircularDependencyException;
 import de.minestar.library.plugin.exceptions.MissingDependencyException;

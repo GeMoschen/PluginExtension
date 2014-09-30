@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import de.minestar.library.plugin.annotations.CallMethod;
-import de.minestar.library.plugin.annotations.ExternalPlugin;
 import de.minestar.library.plugin.annotations.Plugin;
 import de.minestar.library.plugin.annotations.PostEnable;
 import de.minestar.library.plugin.annotations.PreDisable;
