@@ -53,7 +53,7 @@ public class PluginDefinition {
     private final String[] dependencies;
     private final List<PluginDefinition> dependingPlugins;
     private final Map<Priority, List<Method>> postEnableMap, preDisableMap;
-    private final Map<Integer, List<MethodCall>> callMethodList;
+    private final Map<Integer, List<MethodCall>> afterInitializationMap;
 
     protected static PluginDefinition createPlugin(PluginManager pluginManager, Class<? extends ExternalPlugin> clazz) {
         try {
@@ -73,16 +73,24 @@ public class PluginDefinition {
             this.dependencies = this.fetchDependencies();
             this.postEnableMap = this.fetchMethods(PostEnable.class);
             this.preDisableMap = this.fetchMethods(PreDisable.class);
-            this.callMethodList = this.fetchCallMethods();
+            this.afterInitializationMap = this.fetchCallMethods();
             this.dependingPlugins = new ArrayList<PluginDefinition>();
             this.enabled = false;
-            Field field = ExternalPlugin.class.getDeclaredField("pluginManager");
-            field.setAccessible(true);
-            field.set(this.instance, this.pluginManager);
-            field.setAccessible(false);
+            this.setPluginManager();
         } catch (Exception originalException) {
             throw new PluginCreationFailedException("Could not create plugin '" + clazz.getSimpleName() + "'!", originalException);
         }
+    }
+
+    private void setPluginManager() throws NoSuchFieldException, IllegalAccessException {
+        // get the field
+        Field field = ExternalPlugin.class.getDeclaredField("pluginManager");
+        // set field accessible
+        field.setAccessible(true);
+        // update the value
+        field.set(this.instance, this.pluginManager);
+        // set field unaccessible
+        field.setAccessible(false);
     }
 
     private Map<Integer, List<MethodCall>> fetchCallMethods() {
@@ -114,7 +122,7 @@ public class PluginDefinition {
 
     protected void afterInitializationCalls() {
         try {
-            for (List<MethodCall> list : this.callMethodList.values()) {
+            for (List<MethodCall> list : this.afterInitializationMap.values()) {
                 for (MethodCall methodCall : list) {
                     methodCall.invoke();
                 }
@@ -173,26 +181,26 @@ public class PluginDefinition {
                 // if the class is the same, append the method
                 if (clazz.isAssignableFrom(annotation.getClass())) {
 
-                    // fetch level
-                    Priority level = Priority.THIRD_MOST;
+                    // fetch priority
+                    Priority priority = Priority.THIRD_MOST;
                     if (PostEnable.class.isAssignableFrom(annotation.getClass())) {
                         PostEnable onEnable = (PostEnable) annotation;
-                        level = onEnable.priority();
+                        priority = onEnable.priority();
                     } else if (PreDisable.class.isAssignableFrom(annotation.getClass())) {
                         PreDisable onDisable = (PreDisable) annotation;
-                        level = onDisable.priority();
+                        priority = onDisable.priority();
                     }
 
-                    // create arrayList, if there is none yet
-                    if (!map.containsKey(level)) {
-                        map.put(level, new ArrayList<Method>());
+                    // create arrayList, if there isn't one
+                    if (!map.containsKey(priority)) {
+                        map.put(priority, new ArrayList<Method>());
                     }
 
                     // set accessible
                     method.setAccessible(true);
 
                     // append the method
-                    map.get(level).add(method);
+                    map.get(priority).add(method);
                 }
             }
         }
@@ -202,9 +210,12 @@ public class PluginDefinition {
     }
 
     private void callMethods(Map<Priority, List<Method>> map) {
+        // iterate...
         for (Map.Entry<Priority, List<Method>> entry : map.entrySet()) {
+            // for every method in the list...
             for (Method method : entry.getValue()) {
                 try {
+                    // try to invoke the method
                     method.invoke(this.instance);
                 } catch (Exception print) {
                     print.printStackTrace();
@@ -244,8 +255,11 @@ public class PluginDefinition {
     }
 
     protected boolean enable() {
-        this.enabled = true;
-        return true;
+        if (!this.enabled) {
+            this.enabled = true;
+            return true;
+        }
+        return false;
     }
 
     protected boolean disable() {
@@ -258,6 +272,7 @@ public class PluginDefinition {
 
     protected boolean callPostEnableMethods() {
         if (this.enabled) {
+            // call postEnable-Methods
             this.callMethods(this.postEnableMap);
             return true;
         }
@@ -266,6 +281,7 @@ public class PluginDefinition {
 
     protected boolean callPreDisableMethods() {
         if (this.enabled) {
+            // call preDisable-Methods
             this.callMethods(this.preDisableMap);
             return true;
         }

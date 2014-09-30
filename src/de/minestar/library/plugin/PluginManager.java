@@ -59,7 +59,6 @@ public class PluginManager {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, PluginDefinition> loadPlugins(File folder) throws IOException {
         // create new set
         Map<String, PluginDefinition> map = new HashMap<String, PluginDefinition>();
@@ -82,16 +81,20 @@ public class PluginManager {
                 URLClassLoader cl = URLClassLoader.newInstance(urls);
 
                 // iterate over elements...
-                Class<?> clazz;
+                Class<? extends ExternalPlugin> clazz;
                 while (e.hasMoreElements()) {
                     try {
-                        // get the entry
+                        // get the class
                         clazz = this.processJarEntry(cl, (JarEntry) e.nextElement());
+                        // we need a valid class to process this class
                         if (clazz != null) {
+                            // the class name must be unique
                             if (!map.containsKey(clazz.getSimpleName())) {
                                 // create "AbstractPlugin"
-                                PluginDefinition pluginDefinition = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
+                                PluginDefinition pluginDefinition = PluginDefinition.createPlugin(this, clazz);
+                                // if everything is okay
                                 if (pluginDefinition != null) {
+                                    // add the class to the map
                                     map.put(pluginDefinition.getName(), pluginDefinition);
                                 }
                             } else {
@@ -110,7 +113,8 @@ public class PluginManager {
         return map;
     }
 
-    private Class<?> processJarEntry(URLClassLoader cl, JarEntry jarEntry) {
+    @SuppressWarnings("unchecked")
+    private Class<? extends ExternalPlugin> processJarEntry(URLClassLoader cl, JarEntry jarEntry) {
         // directories and files without ".class"-ending are ignored
         if (jarEntry.isDirectory() || !jarEntry.getName().endsWith(".class")) {
             return null;
@@ -123,10 +127,9 @@ public class PluginManager {
         try {
             // load the class
             Class<?> clazz = cl.loadClass(className);
-
             // check class and "Plugin"-Annotation
             if (ExternalPlugin.class.isAssignableFrom(clazz) && this.hasAnnotation(clazz, Plugin.class)) {
-                return clazz;
+                return (Class<? extends ExternalPlugin>) clazz;
             }
         } catch (ClassNotFoundException print) {
             print.printStackTrace();
@@ -202,11 +205,8 @@ public class PluginManager {
         // unload first
         this.disablePlugins();
 
-        // check circular dependencies
-        this.checkForCircularDependencies();
-
-        // check missing dependencies
-        this.checkForMissingDependencies();
+        // check for missing & circular dependencies
+        while (!(this.checkForMissingDependencies() && this.checkForCircularDependencies()));
 
         // enable all plugins
         for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
@@ -224,48 +224,37 @@ public class PluginManager {
         }
     }
 
-    private void checkForMissingDependencies() {
+    private boolean checkForMissingDependencies() {
         // check for missing dependencies
-        boolean missingCheckCompleted = false;
-        while (!missingCheckCompleted) {
-            missingCheckCompleted = true;
-            try {
-                for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
-                    pluginDefinition.updateDependencies();
-                }
-            } catch (MissingDependencyException print) {
-                // print the error
-                System.err.println(print.getMessage());
-
-                // remove the plugin
-                this.loadedPlugins.remove(print.getPluginDefinition().getName());
-
-                // reset "missingCheckCompleted"
-                missingCheckCompleted = false;
+        try {
+            for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
+                pluginDefinition.updateDependencies();
             }
+            return true;
+        } catch (MissingDependencyException print) {
+            // print the error
+            System.err.println(print.getMessage());
+
+            // remove the plugin
+            this.loadedPlugins.remove(print.getPluginDefinition().getName());
+            return false;
         }
     }
 
-    private void checkForCircularDependencies() {
-        // check for circular dependencies
-        boolean circularCheckCompleted = false;
-        while (!circularCheckCompleted) {
-            circularCheckCompleted = true;
-            try {
-                for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
-                    pluginDefinition.checkForCircularDependencies(pluginDefinition, new ArrayList<PluginDefinition>());
-                }
-            } catch (CircularDependencyException print) {
-                // print the error
-                System.err.println(print.getMessage());
-
-                // remove the plugins
-                this.loadedPlugins.remove(print.getFirstPluginDefinition().getName());
-                this.loadedPlugins.remove(print.getSecondPluginDefinition().getName());
-
-                // reset "circularCheckCompleted"
-                circularCheckCompleted = false;
+    private boolean checkForCircularDependencies() {
+        try {
+            for (PluginDefinition pluginDefinition : this.loadedPlugins.values()) {
+                pluginDefinition.checkForCircularDependencies(pluginDefinition, new ArrayList<PluginDefinition>());
             }
+            return true;
+        } catch (CircularDependencyException print) {
+            // print the error
+            System.err.println(print.getMessage());
+
+            // remove the plugins
+            this.loadedPlugins.remove(print.getFirstPluginDefinition().getName());
+            this.loadedPlugins.remove(print.getSecondPluginDefinition().getName());
+            return false;
         }
     }
 
