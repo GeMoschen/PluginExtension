@@ -222,7 +222,6 @@ public class PluginManager {
         for (PluginDefinition pluginDefinition : this.enabledPlugins.values()) {
             pluginDefinition.afterInitializationCalls();
         }
-
     }
 
     private void checkForMissingDependencies() {
