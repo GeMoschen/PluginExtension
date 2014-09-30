@@ -23,7 +23,6 @@
  */
 package de.minestar.library.plugin;
 
-
 public abstract class ExternalPlugin {
 
     private PluginManager pluginManager;

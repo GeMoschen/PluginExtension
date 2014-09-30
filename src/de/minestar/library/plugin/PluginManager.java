@@ -88,7 +88,7 @@ public class PluginManager {
                         // get the entry
                         clazz = this.processJarEntry(cl, (JarEntry) e.nextElement());
                         if (clazz != null) {
-                            if (!map.containsKey(clazz.getSimpleName())) {
+                            if (!map.containsKey(clazz.getSimpleName()) && ExternalPlugin.class.isAssignableFrom(clazz)) {
                                 // create "AbstractPlugin"
                                 PluginDefinition pluginDefinition = PluginDefinition.createPlugin(this, (Class<? extends ExternalPlugin>) clazz);
                                 if (pluginDefinition != null) {
