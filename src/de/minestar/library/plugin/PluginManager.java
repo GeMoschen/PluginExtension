@@ -202,10 +202,12 @@ public class PluginManager {
     }
 
     public void enablePlugins() {
-        // unload first
+        // disable active plugins
         this.disablePlugins();
 
         // check for missing & circular dependencies
+        // we need to repeat these checks, until we have no more errors.
+        // otherwise it would be possible to have plugins that will be enabled, if they have a missing/circular dependency
         while (!(this.checkForMissingDependencies() && this.checkForCircularDependencies()));
 
         // enable all plugins
