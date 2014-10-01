@@ -211,9 +211,9 @@ public class PluginDefinition {
 
     private void callMethods(Map<Priority, List<Method>> map) {
         // iterate...
-        for (Map.Entry<Priority, List<Method>> entry : map.entrySet()) {
+        for (List<Method> list : map.values()) {
             // for every method in the list...
-            for (Method method : entry.getValue()) {
+            for (Method method : list) {
                 try {
                     // try to invoke the method
                     method.invoke(this.instance);
